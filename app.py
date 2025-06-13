@@ -61,7 +61,9 @@ def register():
 def employer_dashboard():
     if current_user.role != 'employer':
         return redirect(url_for('home'))
-    return render_template('employer_dashboard.html')
+    
+    jobs = Job.query.filter_by(employer_id=current_user.id).all()
+    return render_template('employer_dashboard.html', jobs=jobs)
 
 @app.route('/worker')
 @login_required
@@ -76,6 +78,28 @@ def logout():
     logout_user()
     return redirect(url_for('home'))
 
+from models import Job
+@app.route('/new-job', methods=['GET', 'POST'])
+@login_required
+def new_job():
+    if request.method == 'POST':
+        title = request.form['title']
+        description = request.form['description']
+        hourly_rate = request.form['hourly_rate']
+        
+        job = Job(
+            title=title,
+            description=description,
+            hourly_rate=hourly_rate,
+            employer_id=current_user.id
+        )
+        db.session.add(job)
+        db.session.commit()
+        flash('משרה פורסמה בהצלחה!')
+        return redirect(url_for('employer_dashboard'))  # Adjust to your dashboard route
+    
+    return render_template('new_job.html')
 if __name__ == '__main__':
-
+    with app.app_context():
+        db.create_all()
     app.run(debug=True)

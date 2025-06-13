@@ -368,7 +368,7 @@
                     פרסם משרה חדשה
                 </h3>
                 <p>פרסם דרישה חדשה לעובדים ומצא את המועמד המתאים</p>
-                <a href="#" class="btn btn-success">פרסם משרה</a>
+                <a href="{{ url_for('new_job') }}" class="btn btn-success">פרסם משרה</a>
             </div>
 
             <div class="card">
@@ -394,28 +394,23 @@
             <h2 class="section-title">המשרות שלי</h2>
             
             <!-- Example job cards - replace with dynamic content -->
-            <div class="job-card">
-                <div class="job-status">פעיל</div>
-                <div class="job-title">עובד ניקיון למשרד</div>
-                <div class="job-details">פורסם לפני 2 ימים • 5 מועמדים • ₪150/שעה</div>
-                <p>דרוש עובד ניקיון אמין למשרד בתל אביב. עבודה במשרה חלקית, 4 שעות ביום.</p>
-                <div class="job-actions">
-                    <a href="#" class="btn">צפה במועמדים</a>
-                    <a href="#" class="btn btn-secondary">ערוך משרה</a>
-                </div>
-            </div>
-
-            <div class="job-card">
-                <div class="job-status">פעיל</div>
-                <div class="job-title">סייע במטבח</div>
-                <div class="job-details">פורסם לפני שבוע • 12 מועמדים • ₪180/שעה</div>
-                <p>דרוש סייע במטבח למסעדה ברמת גן. משמרת ערב, ניסיון קודם יתרון.</p>
-                <div class="job-actions">
-                    <a href="#" class="btn">צפה במועמדים</a>
-                    <a href="#" class="btn btn-secondary">ערוך משרה</a>
-                </div>
-            </div>
-
+            {% if jobs %}
+                {% for job in jobs %}
+                    <div class="job-card">
+                        <div class="job-status">פעיל</div>
+                        <div class="job-title">{{ job.title }}</div>
+                        <div class="job-details">₪{{ job.hourly_rate }}/שעה</div>
+                        <p>{{ job.description }}</p>
+                        <div class="job-actions">
+                            <a href="#" class="btn">צפה במועמדים</a>
+                            <a href="#" class="btn">מחיקת המשרה</a>
+                            <a href="#" class="btn btn-secondary">ערוך משרה</a>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="no-jobs">טרם פרסמת משרות. התחל בפרסום המשרה הראשונה שלך!</div>
+            {% endif %}
             <!-- If no jobs available -->
             <!-- <div class="no-jobs">טרם פרסמת משרות. התחל בפרסום המשרה הראשונה שלך!</div> -->
         </div>
