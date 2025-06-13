@@ -99,6 +99,53 @@ def new_job():
         return redirect(url_for('employer_dashboard'))  # Adjust to your dashboard route
     
     return render_template('new_job.html')
+
+@app.route('/delete-job/<int:job_id>', methods=['POST'])
+@login_required
+def delete_job(job_id):
+    job = Job.query.get_or_404(job_id)
+
+    # בדיקה שהמשתמש הוא הבעלים של המודעה
+    if job.employer_id != current_user.id:
+        flash('אין לך הרשאה למחוק משרה זו', 'danger')
+        return redirect(url_for('employer_dashboard'))
+
+    # מחיקת המודעה מהמסד נתונים
+    try:
+        db.session.delete(job)
+        db.session.commit()
+        flash('המשרה נמחקה בהצלחה', 'success')
+    except:
+        db.session.rollback()
+        flash('אירעה שגיאה במחיקת המשרה', 'danger')
+
+    return redirect(url_for('employer_dashboard'))
+@app.route('/edit-job/<int:job_id>', methods=['GET', 'POST'])
+@login_required
+def edit_job(job_id):
+    job = Job.query.get_or_404(job_id)
+
+    # בדיקה שהמשתמש הוא הבעלים של המשרה
+    if job.employer_id != current_user.id:
+        flash('אין לך הרשאה לערוך משרה זו', 'danger')
+        return redirect(url_for('employer_dashboard'))
+
+    if request.method == 'POST':
+        # עדכון המשרה עם הנתונים מהטופס
+        job.title = request.form['title']
+        job.description = request.form['description']
+        job.hourly_rate = request.form['hourly_rate']
+
+        try:
+            db.session.commit()
+            flash('המשרה עודכנה בהצלחה', 'success')
+            return redirect(url_for('employer_dashboard'))
+        except:
+            db.session.rollback()
+            flash('אירעה שגיאה בעדכון המשרה', 'danger')
+
+    # GET - הצגת טופס עריכה עם הנתונים הקיימים
+    return render_template('edit_job.html', job=job)
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()

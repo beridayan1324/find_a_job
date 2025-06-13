@@ -403,8 +403,10 @@
                         <p>{{ job.description }}</p>
                         <div class="job-actions">
                             <a href="#" class="btn">צפה במועמדים</a>
-                            <a href="#" class="btn">מחיקת המשרה</a>
-                            <a href="#" class="btn btn-secondary">ערוך משרה</a>
+                            <form method="POST" action="{{ url_for('delete_job', job_id=job.id) }}" onsubmit="return confirm('אתה בטוח שברצונך למחוק את המשרה?');" style="display:inline;">
+                                <button type="submit" class="btn btn-danger">מחיקת המשרה</button>
+                            </form>
+                            <a href="{{ url_for('edit_job', job_id=job.id) }}" class="btn btn-secondary">ערוך משרה</a>
                         </div>
                     </div>
                 {% endfor %}
