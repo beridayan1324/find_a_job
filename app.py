@@ -64,18 +64,46 @@ def employer_dashboard():
     if current_user.role != 'employer':
         return redirect(url_for('home'))
     
+    # כל המשרות שהמעסיק פרסם
     jobs = Job.query.filter_by(employer_id=current_user.id).all()
-    return render_template('employer_dashboard.html', jobs=jobs)
+
+    # מספר משרות פעילות (אפשר לסנן אם יש שדה שמגדיר מצב פעילות, אחרת פשוט הספור הוא כל המשרות)
+    active_jobs_count = len(jobs)
+
+    # מספר מועמדים למשרות של המעסיק - סופר את כל היישומים למשרות שלו
+    job_ids = [job.id for job in jobs]
+
+    # סופר את כל היישומים עם job_id מתוך רשימת המשרות של המעסיק
+    candidates_count = Application.query.filter(Application.job_id.in_(job_ids)).count()
+
+    return render_template(
+        'employer_dashboard.html', 
+        jobs=jobs, 
+        active_jobs_count=active_jobs_count, 
+        candidates_count=candidates_count
+    )
 
 @app.route('/worker')
 @login_required
 def worker_dashboard():
-    if current_user.role != 'worker':
-        return redirect(url_for('home'))
-    jobs = Job.query.all()  # או סינון לפי קריטריונים מתאימים
-    return render_template('worker_dashboard.html', jobs=jobs)
+    # נניח שיש לך כבר את רשימת המשרות והבקשות
+    jobs = Job.query.all()  # או מסנן אחר לפי הצורך
+    applications = Application.query.filter_by(user_id=current_user.id).all()
 
+    # סופרים בקשות פעילות (למשל סטטוס 'active')
+    active_applications_count = Application.query.filter_by(user_id=current_user.id, status='active').count()
+    
+    # סופרים עבודות שהושלמו (למשל סטטוס 'completed')
+    completed_jobs_count = Application.query.filter_by(user_id=current_user.id, status='completed').count()
+    
 
+    return render_template(
+        'worker_dashboard.html',
+        jobs=jobs,
+        applications=applications,
+        active_applications_count=active_applications_count,
+        completed_jobs_count=completed_jobs_count,
+    )
 @app.route('/logout')
 @login_required
 def logout():
