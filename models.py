@@ -19,3 +19,8 @@ class Job(db.Model):
     employer_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
     employer = db.relationship('User', backref='jobs')
+class Application(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    job_id = db.Column(db.Integer, db.ForeignKey('job.id'), nullable=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)

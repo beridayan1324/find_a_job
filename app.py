@@ -3,6 +3,8 @@ from flask_login import login_user, login_required, logout_user, current_user
 from extensions import db, login_manager
 from forms import LoginForm, RegisterForm
 from models import User
+from models import Application, Job, db
+
 import os
 
 app = Flask(__name__)
@@ -80,7 +82,6 @@ def logout():
     logout_user()
     return redirect(url_for('home'))
 
-from models import Job
 @app.route('/new-job', methods=['GET', 'POST'])
 @login_required
 def new_job():
@@ -148,7 +149,31 @@ def edit_job(job_id):
 
     # GET - הצגת טופס עריכה עם הנתונים הקיימים
     return render_template('edit_job.html', job=job)
+
+@app.route('/apply/<int:job_id>', methods=['POST'])
+@login_required
+def apply_job(job_id):
+    existing = Application.query.filter_by(user_id=current_user.id, job_id=job_id).first()
+    if existing:
+        flash('כבר הגשת מועמדות לעבודה זו.', 'warning')
+    else:
+        new_app = Application(user_id=current_user.id, job_id=job_id)
+        db.session.add(new_app)
+        print('Added new application to session')
+        db.session.commit()
+        print('Committed new application to DB')
+        flash('המועמדות נשלחה בהצלחה!', 'success')
+
+    return redirect(url_for('worker_dashboard'))
+@app.route('/employer/applications')
+@login_required
+def employer_applications():
+    # רק למעסיקים – סנן רק עבודות שהמעסיק פרסם
+    jobs = Job.query.filter_by(employer_id=current_user.id).all()
+    return render_template('employer_applications.html', jobs=jobs)
 if __name__ == '__main__':
+
     with app.app_context():
+
         db.create_all()
     app.run(debug=True)
