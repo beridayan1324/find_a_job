@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>מועמדים למשרות שלך</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+            padding: 2rem;
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+            text-align: center;
+            color: white; /* Changed to white */
+            background: none; /* Remove previous gradient */
+            -webkit-background-clip: unset;
+            -webkit-text-fill-color: unset;
+            background-clip: unset;
+            user-select: none;
+            /* optional text shadow for better visibility */
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
+        }
+
+        ul {
+            list-style: none;
+            max-width: 700px;
+            margin: 0 auto 2rem auto;
+            padding: 0;
+        }
+
+        li {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 1.5rem 2rem;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            margin-bottom: 1rem;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+            line-height: 1.5;
+        }
+
+        li:hover {
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+            transform: translateY(-5px);
+        }
+
+        strong {
+            color: #667eea;
+        }
+
+        p {
+            text-align: center;
+            font-style: italic;
+            color: #ddd;
+            margin-top: 2rem;
+            font-size: 1.2rem;
+        }
+
+        .back-link {
+            display: inline-block;
+            max-width: 700px;
+            margin: 0 auto;
+            text-decoration: none;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-weight: 600;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(255, 255, 255, 0.95);
+            transition: all 0.3s ease;
+            user-select: none;
+            font-size: 1.1rem;
+        }
+
+        .back-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        /* רספונסיב */
+        @media (max-width: 600px) {
+            body {
+                padding: 1rem;
+            }
+
+            li {
+                padding: 1rem 1.2rem;
+                font-size: 0.95rem;
+            }
+
+            h1 {
+                font-size: 1.5rem;
+            }
+
+            .back-link {
+                padding: 10px 20px;
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>המועמדים למשרות שפרסמת</h1>
+
+    {% if applications %}
+        <ul>
+        {% for item in applications %}
+            <li>
+                <strong>משרה:</strong> {{ item.job.title }} <br>
+                <strong>מועמד:</strong> {{ item.candidate.email }}<br>
+                <strong>תאריך הגשה:</strong> {{ item.application.timestamp.strftime('%d/%m/%Y') if item.application.timestamp else 'לא זמין' }}
+            </li>
+        {% endfor %}
+        </ul>
+    {% else %}
+        <p>אין מועמדים כרגע.</p>
+    {% endif %}
+
+    <a href="{{ url_for('employer_dashboard') }}" class="back-link">חזור ללוח הבקרה</a>
+</body>
+</html>

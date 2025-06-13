@@ -168,9 +168,21 @@ def apply_job(job_id):
 @app.route('/employer/applications')
 @login_required
 def employer_applications():
-    # רק למעסיקים – סנן רק עבודות שהמעסיק פרסם
+    # שולף את כל המשרות שהמעסיק פרסם
     jobs = Job.query.filter_by(employer_id=current_user.id).all()
-    return render_template('employer_applications.html', jobs=jobs)
+
+    # אוסף את כל המועמדויות של המשרות האלו
+    applications = []
+    for job in jobs:
+        job_apps = Application.query.filter_by(job_id=job.id).all()
+        for app in job_apps:
+            applications.append({
+                'job': job,
+                'application': app,
+                'candidate': User.query.get(app.user_id)
+            })
+
+    return render_template('employer_applications.html', applications=applications)
 if __name__ == '__main__':
 
     with app.app_context():

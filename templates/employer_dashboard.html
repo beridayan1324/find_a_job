@@ -344,13 +344,13 @@
     <div class="container">
         <div class="stats">
             <div class="stat-item">
-                <span class="stat-number">0</span>
-                <span class="stat-label">משרות פעילות</span>
-            </div>
-            <div class="stat-item">
-                <span class="stat-number">0</span>
-                <span class="stat-label">מועמדים</span>
-            </div>
+            <span class="stat-number">{{ active_jobs_count }}</span>
+            <span class="stat-label">משרות פעילות</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-number">{{ candidates_count }}</span>
+            <span class="stat-label">מועמדים</span>
+        </div>
             <div class="stat-item">
                 <span class="stat-number">0</span>
                 <span class="stat-label">משרות שהושלמו</span>
@@ -377,7 +377,7 @@
                     ניהול מועמדים
                 </h3>
                 <p>צפה וניהל את המועמדים למשרות שלך</p>
-                <a href="#" class="btn btn-secondary">צפה במועמדים</a>
+                <a href="{{ url_for('employer_applications') }}" class="btn btn-secondary">צפה במועמדים</a>
             </div>
 
             <div class="card">
