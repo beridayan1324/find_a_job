@@ -305,26 +305,23 @@
             </div>
         </div>
 
-        <div class="jobs-section">
+         <div class="jobs-section">
             <h2 class="section-title">הצעות עבודה חד פעמיות</h2>
-            
-            <!-- Example job cards - replace with dynamic content -->
-            <div class="job-card">
-                <div class="job-title">עבודת ניקיון במשרד</div>
-                <div class="job-details">תל אביב • ₪150 לשעה • זמן חלקי</div>
-                <p>דרושים עובדי ניקיון למשרד בתל אביב. עבודה נקייה ונעימה.</p>
-                <a href="#" class="btn" style="font-size: 0.9rem; padding: 8px 16px;">הגש מועמדות</a>
-            </div>
 
-            <div class="job-card">
-                <div class="job-title">סייע במטבח</div>
-                <div class="job-details">רמת גן • ₪180 לשעה • משמרת ערב</div>
-                <p>דרוש סייע במטבח למסעדה ברמת גן. ניסיון קודם יתרון.</p>
-                <a href="#" class="btn" style="font-size: 0.9rem; padding: 8px 16px;">הגש מועמדות</a>
-            </div>
-
-            <!-- If no jobs available -->
-            <!-- <div class="no-jobs">אין הצעות עבודה זמינות כרגע</div> -->
+            {% if jobs %}
+                {% for job in jobs %}
+                <div class="job-card">
+                    <div class="job-title">{{ job.title }}</div>
+                    <div class="job-details">{{ job.location }} • ₪{{ job.hourly_rate }} לשעה • {{ job.shift }}</div>
+                    <p>{{ job.description }}</p>
+                    <form action="{{ url_for('delete_job', job_id=job.id) }}" method="post" style="display:inline;">
+                        <button type="submit" class="btn" style="font-size: 0.9rem; padding: 8px 16px;">הגש מועמדות</button>
+                    </form>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="no-jobs">אין הצעות עבודה זמינות כרגע.</div>
+            {% endif %}
         </div>
     </div>
 </body>

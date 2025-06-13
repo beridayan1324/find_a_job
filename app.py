@@ -70,7 +70,9 @@ def employer_dashboard():
 def worker_dashboard():
     if current_user.role != 'worker':
         return redirect(url_for('home'))
-    return render_template('worker_dashboard.html')
+    jobs = Job.query.all()  # או סינון לפי קריטריונים מתאימים
+    return render_template('worker_dashboard.html', jobs=jobs)
+
 
 @app.route('/logout')
 @login_required
