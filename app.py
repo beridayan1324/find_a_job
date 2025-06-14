@@ -136,19 +136,22 @@ def new_job():
 def delete_job(job_id):
     job = Job.query.get_or_404(job_id)
 
-    # בדיקה שהמשתמש הוא הבעלים של המודעה
     if job.employer_id != current_user.id:
         flash('אין לך הרשאה למחוק משרה זו', 'danger')
         return redirect(url_for('employer_dashboard'))
 
-    # מחיקת המודעה מהמסד נתונים
     try:
+        # מחיקת כל הבקשות הקשורות למשרה
+        Application.query.filter_by(job_id=job.id).delete()
+
+        # מחיקת המשרה
         db.session.delete(job)
         db.session.commit()
-        flash('המשרה נמחקה בהצלחה', 'success')
+
+        flash('המשרה וכל המועמדויות נמחקו בהצלחה', 'success')
     except:
         db.session.rollback()
-        flash('אירעה שגיאה במחיקת המשרה', 'danger')
+        flash('אירעה שגיאה במחיקת המשרה או הבקשות', 'danger')
 
     return redirect(url_for('employer_dashboard'))
 @app.route('/edit-job/<int:job_id>', methods=['GET', 'POST'])
