@@ -4,11 +4,12 @@ from extensions import db, login_manager
 from forms import LoginForm, RegisterForm
 from models import User
 from models import Application, Job, db
+from werkzeug.security import generate_password_hash, check_password_hash
 
 import os
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'beridayan2008'
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', os.urandom(32))
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(app.instance_path, 'database.db')
 
 db.init_app(app)
@@ -29,10 +30,10 @@ def login():
     form = LoginForm()
     if form.validate_on_submit():
         user = User.query.filter_by(email=form.email.data).first()
-        if user and user.password == form.password.data:
+        if user and check_password_hash(user.password, form.password.data):
             login_user(user)
             return redirect(url_for('employer_dashboard' if user.role == 'employer' else 'worker_dashboard'))
-        flash('אימייל או סיסמה שגויים')
+        flash('אימייל או סיסמא שגויים')
     return render_template('login.html', form=form)
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -46,7 +47,8 @@ def register():
             return render_template('register.html', form=form)
 
         # משתמש לא קיים – צור חדש
-        user = User(email=form.email.data, password=form.password.data, role=form.role.data)
+        hashed_password = generate_password_hash(form.password.data)
+        user = User(email=form.email.data, password=hashed_password, role=form.role.data)
         db.session.add(user)
         try:
             db.session.commit()
@@ -113,6 +115,9 @@ def logout():
 @app.route('/new-job', methods=['GET', 'POST'])
 @login_required
 def new_job():
+    if current_user.role != 'employer':
+        flash('אין לך הרשאה לפרסם משרות', 'danger')
+        return redirect(url_for('home'))
     if request.method == 'POST':
         title = request.form['title']
         description = request.form['description']
@@ -199,6 +204,10 @@ def apply_job(job_id):
 @app.route('/employer/applications')
 @login_required
 def employer_applications():
+    if current_user.role != 'employer':
+        flash('אין לך הרשאה לצפות בדף זה', 'danger')
+        return redirect(url_for('home'))
+
     # שולף את כל המשרות שהמעסיק פרסם
     jobs = Job.query.filter_by(employer_id=current_user.id).all()
 
@@ -206,11 +215,11 @@ def employer_applications():
     applications = []
     for job in jobs:
         job_apps = Application.query.filter_by(job_id=job.id).all()
-        for app in job_apps:
+        for application in job_apps:
             applications.append({
                 'job': job,
-                'application': app,
-                'candidate': User.query.get(app.user_id)
+                'application': application,
+                'candidate': User.query.get(application.user_id)
             })
 
     return render_template('employer_applications.html', applications=applications)
