@@ -84,6 +84,9 @@
     <div class="container">
         <h2>פרסם משרה חדשה</h2>
         <form method="POST">
+            {{ form.hidden_tag() if form is defined else '' }}
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
             <label for="title">שם המשרה:</label>
             <input type="text" id="title" name="title" required>
 

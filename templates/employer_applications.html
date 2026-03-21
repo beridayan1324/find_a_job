@@ -23,13 +23,12 @@
             font-size: 2rem;
             margin-bottom: 1.5rem;
             text-align: center;
-            color: white; /* Changed to white */
-            background: none; /* Remove previous gradient */
+            color: white;
+            background: none;
             -webkit-background-clip: unset;
             -webkit-text-fill-color: unset;
             background-clip: unset;
             user-select: none;
-            /* optional text shadow for better visibility */
             text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
         }
 
@@ -91,7 +90,6 @@
             box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
         }
 
-        /* רספונסיב */
         @media (max-width: 600px) {
             body {
                 padding: 1rem;
@@ -120,8 +118,8 @@
         <ul>
         {% for item in applications %}
             <li>
-                <strong>משרה:</strong> {{ item.job.title }} <br>
-                <strong>מועמד:</strong> {{ item.candidate.email }}<br>
+                <strong>משרה:</strong> {{ item.job.title | e }} <br>
+                <strong>מועמד:</strong> {{ item.candidate.email | e }}<br>
                 <strong>תאריך הגשה:</strong> {{ item.application.timestamp.strftime('%d/%m/%Y') if item.application.timestamp else 'לא זמין' }}
             </li>
         {% endfor %}
