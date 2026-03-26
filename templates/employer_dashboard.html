@@ -336,7 +336,7 @@
 <body>
     <div class="header">
         <div class="welcome-text">
-            שלום מעסיק {{ current_user.email }}
+            שלום מעסיק
         </div>
         <a href="{{ url_for('logout') }}" class="logout-btn">התנתק</a>
     </div>
@@ -393,14 +393,13 @@
         <div class="jobs-section">
             <h2 class="section-title">המשרות שלי</h2>
             
-            <!-- Example job cards - replace with dynamic content -->
             {% if jobs %}
                 {% for job in jobs %}
                     <div class="job-card">
                         <div class="job-status">פעיל</div>
-                        <div class="job-title">{{ job.title }}</div>
-                        <div class="job-details">₪{{ job.hourly_rate }}/שעה</div>
-                        <p>{{ job.description }}</p>
+                        <div class="job-title">{{ job.title | e }}</div>
+                        <div class="job-details">₪{{ job.hourly_rate | e }}/שעה</div>
+                        <p>{{ job.description | e }}</p>
                         <div class="job-actions">
                             <a href="#" class="btn">צפה במועמדים</a>
                             <form method="POST" action="{{ url_for('delete_job', job_id=job.id) }}" onsubmit="return confirm('אתה בטוח שברצונך למחוק את המשרה?');" style="display:inline;">
@@ -411,36 +410,8 @@
                     </div>
                 {% endfor %}
             {% else %}
-                <div class="no-jobs">טרם פרסמת משרות. התחל בפרסום המשרה הראשונה שלך!</div>
+                <div class="no-jobs">אין משרות פעילות כרגע.</div>
             {% endif %}
-            <!-- If no jobs available -->
-            <!-- <div class="no-jobs">טרם פרסמת משרות. התחל בפרסום המשרה הראשונה שלך!</div> -->
-        </div>
-
-        <div class="quick-actions">
-            <h3 class="section-title">פעולות מהירות</h3>
-            <div class="actions-grid">
-                <div class="action-item">
-                    <div class="action-icon">📝</div>
-                    <h4>צור תבנית משרה</h4>
-                    <p>שמור זמן עם תבניות מוכנות</p>
-                </div>
-                <div class="action-item">
-                    <div class="action-icon">📞</div>
-                    <h4>צור קשר עם מועמד</h4>
-                    <p>שלח הודעה למועמד</p>
-                </div>
-                <div class="action-item">
-                    <div class="action-icon">⭐</div>
-                    <h4>דרג עובד</h4>
-                    <p>דרג עובד שעבד איתך</p>
-                </div>
-                <div class="action-item">
-                    <div class="action-icon">💰</div>
-                    <h4>ניהול תשלומים</h4>
-                    <p>עקוב אחר תשלומים</p>
-                </div>
-            </div>
         </div>
     </div>
 </body>
