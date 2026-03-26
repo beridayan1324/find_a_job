@@ -255,7 +255,7 @@
 <body>
     <div class="header">
         <div class="welcome-text">
-            שלום עובד {{ current_user.email }}
+            שלום עובד
         </div>
         <a href="{{ url_for('logout') }}" class="logout-btn">התנתק</a>
     </div>
@@ -311,9 +311,9 @@
             {% if jobs %}
                 {% for job in jobs %}
                 <div class="job-card">
-                    <div class="job-title">{{ job.title }}</div>
-                    <div class="job-details">{{ job.location }} • ₪{{ job.hourly_rate }} לשעה • {{ job.shift }}</div>
-                    <p>{{ job.description }}</p>
+                    <div class="job-title">{{ job.title | e }}</div>
+                    <div class="job-details">₪{{ job.hourly_rate | e }} לשעה</div>
+                    <p>{{ job.description | e }}</p>
                     <form action="{{ url_for('apply_job', job_id=job.id) }}" method="post" style="display:inline;">
                         <button type="submit" class="btn" style="font-size: 0.9rem; padding: 8px 16px;">הגש מועמדות</button>
                     </form>
