@@ -2,6 +2,7 @@
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self';">
     <title>ערוך משרה</title>
     <style>
         * {
@@ -84,14 +85,16 @@
     <div class="container">
         <h2>ערוך משרה</h2>
         <form method="POST">
+            {{ form.hidden_tag() }}
+
             <label for="title">שם המשרה:</label>
-            <input type="text" id="title" name="title" required value="{{ job.title }}">
+            {{ form.title(id='title', required=True) }}
 
             <label for="description">תיאור:</label>
-            <textarea id="description" name="description" required>{{ job.description }}</textarea>
+            {{ form.description(id='description', required=True) }}
 
             <label for="hourly_rate">שכר לשעה (₪):</label>
-            <input type="number" id="hourly_rate" name="hourly_rate" required value="{{ job.hourly_rate }}">
+            {{ form.hourly_rate(id='hourly_rate', required=True) }}
 
             <button type="submit" class="btn">שמור שינויים</button>
         </form>

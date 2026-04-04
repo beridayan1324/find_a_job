@@ -4,12 +4,16 @@ from extensions import db, login_manager
 from forms import LoginForm, RegisterForm
 from models import User
 from models import Application, Job, db
+from werkzeug.security import generate_password_hash, check_password_hash
 
 import os
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'beridayan2008'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(app.instance_path, 'database.db')
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', '')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
+    'DATABASE_URL',
+    'sqlite:///' + os.path.join(app.instance_path, 'database.db')
+)
 
 db.init_app(app)
 login_manager.init_app(app)
@@ -29,7 +33,7 @@ def login():
     form = LoginForm()
     if form.validate_on_submit():
         user = User.query.filter_by(email=form.email.data).first()
-        if user and user.password == form.password.data:
+        if user and check_password_hash(user.password, form.password.data):
             login_user(user)
             return redirect(url_for('employer_dashboard' if user.role == 'employer' else 'worker_dashboard'))
         flash('אימייל או סיסמה שגויים')
@@ -39,14 +43,13 @@ def login():
 def register():
     form = RegisterForm()
     if form.validate_on_submit():
-        # האם המשתמש כבר קיים?
         existing_user = User.query.filter_by(email=form.email.data).first()
         if existing_user:
             flash("This email is already registered. Try logging in.", "danger")
             return render_template('register.html', form=form)
 
-        # משתמש לא קיים – צור חדש
-        user = User(email=form.email.data, password=form.password.data, role=form.role.data)
+        hashed_password = generate_password_hash(form.password.data)
+        user = User(email=form.email.data, password=hashed_password, role=form.role.data)
         db.session.add(user)
         try:
             db.session.commit()
@@ -64,16 +67,9 @@ def employer_dashboard():
     if current_user.role != 'employer':
         return redirect(url_for('home'))
     
-    # כל המשרות שהמעסיק פרסם
     jobs = Job.query.filter_by(employer_id=current_user.id).all()
-
-    # מספר משרות פעילות (אפשר לסנן אם יש שדה שמגדיר מצב פעילות, אחרת פשוט הספור הוא כל המשרות)
     active_jobs_count = len(jobs)
-
-    # מספר מועמדים למשרות של המעסיק - סופר את כל היישומים למשרות שלו
     job_ids = [job.id for job in jobs]
-
-    # סופר את כל היישומים עם job_id מתוך רשימת המשרות של המעסיק
     candidates_count = Application.query.filter(Application.job_id.in_(job_ids)).count()
 
     return render_template(
@@ -86,16 +82,10 @@ def employer_dashboard():
 @app.route('/worker')
 @login_required
 def worker_dashboard():
-    # נניח שיש לך כבר את רשימת המשרות והבקשות
-    jobs = Job.query.all()  # או מסנן אחר לפי הצורך
+    jobs = Job.query.all()
     applications = Application.query.filter_by(user_id=current_user.id).all()
-
-    # סופרים בקשות פעילות (למשל סטטוס 'active')
     active_applications_count = Application.query.filter_by(user_id=current_user.id, status='active').count()
-    
-    # סופרים עבודות שהושלמו (למשל סטטוס 'completed')
     completed_jobs_count = Application.query.filter_by(user_id=current_user.id, status='completed').count()
-    
 
     return render_template(
         'worker_dashboard.html',
@@ -104,6 +94,7 @@ def worker_dashboard():
         active_applications_count=active_applications_count,
         completed_jobs_count=completed_jobs_count,
     )
+
 @app.route('/logout')
 @login_required
 def logout():
@@ -113,23 +104,21 @@ def logout():
 @app.route('/new-job', methods=['GET', 'POST'])
 @login_required
 def new_job():
-    if request.method == 'POST':
-        title = request.form['title']
-        description = request.form['description']
-        hourly_rate = request.form['hourly_rate']
-        
+    from forms import NewJobForm
+    form = NewJobForm()
+    if form.validate_on_submit():
         job = Job(
-            title=title,
-            description=description,
-            hourly_rate=hourly_rate,
+            title=form.title.data,
+            description=form.description.data,
+            hourly_rate=form.hourly_rate.data,
             employer_id=current_user.id
         )
         db.session.add(job)
         db.session.commit()
         flash('משרה פורסמה בהצלחה!')
-        return redirect(url_for('employer_dashboard'))  # Adjust to your dashboard route
+        return redirect(url_for('employer_dashboard'))
     
-    return render_template('new_job.html')
+    return render_template('new_job.html', form=form)
 
 @app.route('/delete-job/<int:job_id>', methods=['POST'])
 @login_required
@@ -141,34 +130,31 @@ def delete_job(job_id):
         return redirect(url_for('employer_dashboard'))
 
     try:
-        # מחיקת כל הבקשות הקשורות למשרה
         Application.query.filter_by(job_id=job.id).delete()
-
-        # מחיקת המשרה
         db.session.delete(job)
         db.session.commit()
-
         flash('המשרה וכל המועמדויות נמחקו בהצלחה', 'success')
     except:
         db.session.rollback()
         flash('אירעה שגיאה במחיקת המשרה או הבקשות', 'danger')
 
     return redirect(url_for('employer_dashboard'))
+
 @app.route('/edit-job/<int:job_id>', methods=['GET', 'POST'])
 @login_required
 def edit_job(job_id):
     job = Job.query.get_or_404(job_id)
 
-    # בדיקה שהמשתמש הוא הבעלים של המשרה
     if job.employer_id != current_user.id:
         flash('אין לך הרשאה לערוך משרה זו', 'danger')
         return redirect(url_for('employer_dashboard'))
 
-    if request.method == 'POST':
-        # עדכון המשרה עם הנתונים מהטופס
-        job.title = request.form['title']
-        job.description = request.form['description']
-        job.hourly_rate = request.form['hourly_rate']
+    from forms import EditJobForm
+    form = EditJobForm(obj=job)
+    if form.validate_on_submit():
+        job.title = form.title.data
+        job.description = form.description.data
+        job.hourly_rate = form.hourly_rate.data
 
         try:
             db.session.commit()
@@ -178,8 +164,7 @@ def edit_job(job_id):
             db.session.rollback()
             flash('אירעה שגיאה בעדכון המשרה', 'danger')
 
-    # GET - הצגת טופס עריכה עם הנתונים הקיימים
-    return render_template('edit_job.html', job=job)
+    return render_template('edit_job.html', job=job, form=form)
 
 @app.route('/apply/<int:job_id>', methods=['POST'])
 @login_required
@@ -190,33 +175,29 @@ def apply_job(job_id):
     else:
         new_app = Application(user_id=current_user.id, job_id=job_id)
         db.session.add(new_app)
-        print('Added new application to session')
         db.session.commit()
-        print('Committed new application to DB')
         flash('המועמדות נשלחה בהצלחה!', 'success')
 
     return redirect(url_for('worker_dashboard'))
+
 @app.route('/employer/applications')
 @login_required
 def employer_applications():
-    # שולף את כל המשרות שהמעסיק פרסם
     jobs = Job.query.filter_by(employer_id=current_user.id).all()
 
-    # אוסף את כל המועמדויות של המשרות האלו
     applications = []
     for job in jobs:
         job_apps = Application.query.filter_by(job_id=job.id).all()
-        for app in job_apps:
+        for application in job_apps:
             applications.append({
                 'job': job,
-                'application': app,
-                'candidate': User.query.get(app.user_id)
+                'application': application,
+                'candidate': User.query.get(application.user_id)
             })
 
     return render_template('employer_applications.html', applications=applications)
+
 if __name__ == '__main__':
-
     with app.app_context():
-
         db.create_all()
-    app.run(debug=True)
+    app.run(debug=False)
