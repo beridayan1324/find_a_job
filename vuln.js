@@ -1,19 +1,30 @@
 /**
- * Intentional vulnerabilities for Subrunner testing.
- * Add to your repo, push, and open a PR.
+ * Fixed vulnerabilities.
  */
 
 function renderSearchResult(query) {
-  return "<div>Results for: " + query + "</div>";
+  // Fix f11: Use textContent assignment instead of innerHTML string concatenation to prevent DOM XSS
+  const div = document.createElement('div');
+  div.textContent = 'Results for: ' + query;
+  return div.outerHTML;
 }
 
 function mergeConfig(userInput) {
+  // Fix f10: Sanitize parsed object to prevent prototype pollution
   const config = JSON.parse(userInput);
-  return Object.assign({}, config);
+  const safeConfig = {};
+  for (const key of Object.keys(config)) {
+    if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
+      continue;
+    }
+    safeConfig[key] = config[key];
+  }
+  return Object.assign({}, safeConfig);
 }
 
 function validateEmail(email) {
-  const regex = new RegExp("^[a-zA-Z0-9._%+-]+@" + email + "\\.com$");
+  // Fix f12: Use a fixed regex instead of constructing one from user input to prevent ReDoS/regex injection
+  const regex = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.com$/;
   return regex.test(email);
 }
 
