@@ -1,14 +1,17 @@
 from flask import Flask, render_template, redirect, url_for, request, flash
 from flask_login import login_user, login_required, logout_user, current_user
 from extensions import db, login_manager
-from forms import LoginForm, RegisterForm
+from forms import LoginForm, RegisterForm, NewJobForm, EditJobForm
 from models import User
 from models import Application, Job, db
+from werkzeug.security import generate_password_hash, check_password_hash
 
 import os
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'beridayan2008'
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
+if not app.config['SECRET_KEY']:
+    raise RuntimeError('SECRET_KEY environment variable is not set')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(app.instance_path, 'database.db')
 
 db.init_app(app)
@@ -29,7 +32,7 @@ def login():
     form = LoginForm()
     if form.validate_on_submit():
         user = User.query.filter_by(email=form.email.data).first()
-        if user and user.password == form.password.data:
+        if user and check_password_hash(user.password, form.password.data):
             login_user(user)
             return redirect(url_for('employer_dashboard' if user.role == 'employer' else 'worker_dashboard'))
         flash('אימייל או סיסמה שגויים')
@@ -46,7 +49,8 @@ def register():
             return render_template('register.html', form=form)
 
         # משתמש לא קיים – צור חדש
-        user = User(email=form.email.data, password=form.password.data, role=form.role.data)
+        hashed_password = generate_password_hash(form.password.data)
+        user = User(email=form.email.data, password=hashed_password, role=form.role.data)
         db.session.add(user)
         try:
             db.session.commit()
@@ -104,6 +108,7 @@ def worker_dashboard():
         active_applications_count=active_applications_count,
         completed_jobs_count=completed_jobs_count,
     )
+
 @app.route('/logout')
 @login_required
 def logout():
@@ -113,10 +118,11 @@ def logout():
 @app.route('/new-job', methods=['GET', 'POST'])
 @login_required
 def new_job():
-    if request.method == 'POST':
-        title = request.form['title']
-        description = request.form['description']
-        hourly_rate = request.form['hourly_rate']
+    form = NewJobForm()
+    if form.validate_on_submit():
+        title = form.title.data
+        description = form.description.data
+        hourly_rate = form.hourly_rate.data
         
         job = Job(
             title=title,
@@ -127,13 +133,20 @@ def new_job():
         db.session.add(job)
         db.session.commit()
         flash('משרה פורסמה בהצלחה!')
-        return redirect(url_for('employer_dashboard'))  # Adjust to your dashboard route
+        return redirect(url_for('employer_dashboard'))
     
-    return render_template('new_job.html')
+    return render_template('new_job.html', form=form)
 
 @app.route('/delete-job/<int:job_id>', methods=['POST'])
 @login_required
 def delete_job(job_id):
+    # Use a CSRF-protected form for delete
+    from flask_wtf import FlaskForm
+    form = FlaskForm()
+    if not form.validate_on_submit():
+        flash('Invalid request', 'danger')
+        return redirect(url_for('employer_dashboard'))
+
     job = Job.query.get_or_404(job_id)
 
     if job.employer_id != current_user.id:
@@ -154,6 +167,7 @@ def delete_job(job_id):
         flash('אירעה שגיאה במחיקת המשרה או הבקשות', 'danger')
 
     return redirect(url_for('employer_dashboard'))
+
 @app.route('/edit-job/<int:job_id>', methods=['GET', 'POST'])
 @login_required
 def edit_job(job_id):
@@ -164,11 +178,12 @@ def edit_job(job_id):
         flash('אין לך הרשאה לערוך משרה זו', 'danger')
         return redirect(url_for('employer_dashboard'))
 
-    if request.method == 'POST':
+    form = EditJobForm(obj=job)
+    if form.validate_on_submit():
         # עדכון המשרה עם הנתונים מהטופס
-        job.title = request.form['title']
-        job.description = request.form['description']
-        job.hourly_rate = request.form['hourly_rate']
+        job.title = form.title.data
+        job.description = form.description.data
+        job.hourly_rate = form.hourly_rate.data
 
         try:
             db.session.commit()
@@ -179,23 +194,29 @@ def edit_job(job_id):
             flash('אירעה שגיאה בעדכון המשרה', 'danger')
 
     # GET - הצגת טופס עריכה עם הנתונים הקיימים
-    return render_template('edit_job.html', job=job)
+    return render_template('edit_job.html', job=job, form=form)
 
 @app.route('/apply/<int:job_id>', methods=['POST'])
 @login_required
 def apply_job(job_id):
+    # Use a CSRF-protected form for apply
+    from flask_wtf import FlaskForm
+    form = FlaskForm()
+    if not form.validate_on_submit():
+        flash('Invalid request', 'danger')
+        return redirect(url_for('worker_dashboard'))
+
     existing = Application.query.filter_by(user_id=current_user.id, job_id=job_id).first()
     if existing:
         flash('כבר הגשת מועמדות לעבודה זו.', 'warning')
     else:
         new_app = Application(user_id=current_user.id, job_id=job_id)
         db.session.add(new_app)
-        print('Added new application to session')
         db.session.commit()
-        print('Committed new application to DB')
         flash('המועמדות נשלחה בהצלחה!', 'success')
 
     return redirect(url_for('worker_dashboard'))
+
 @app.route('/employer/applications')
 @login_required
 def employer_applications():
@@ -206,17 +227,16 @@ def employer_applications():
     applications = []
     for job in jobs:
         job_apps = Application.query.filter_by(job_id=job.id).all()
-        for app in job_apps:
+        for application in job_apps:
             applications.append({
                 'job': job,
-                'application': app,
-                'candidate': User.query.get(app.user_id)
+                'application': application,
+                'candidate': User.query.get(application.user_id)
             })
 
     return render_template('employer_applications.html', applications=applications)
+
 if __name__ == '__main__':
-
     with app.app_context():
-
         db.create_all()
-    app.run(debug=True)
+    app.run(debug=False)
