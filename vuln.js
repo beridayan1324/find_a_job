@@ -4,16 +4,25 @@
  */
 
 function renderSearchResult(query) {
-  return "<div>Results for: " + query + "</div>";
+  const div = document.createElement('div');
+  div.textContent = 'Results for: ' + query;
+  return div.outerHTML;
 }
 
 function mergeConfig(userInput) {
-  const config = JSON.parse(userInput);
-  return Object.assign({}, config);
+  const parsed = JSON.parse(userInput);
+  const config = {};
+  for (const key of Object.keys(parsed)) {
+    if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
+      continue;
+    }
+    config[key] = parsed[key];
+  }
+  return config;
 }
 
 function validateEmail(email) {
-  const regex = new RegExp("^[a-zA-Z0-9._%+-]+@" + email + "\\.com$");
+  const regex = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.com$/;
   return regex.test(email);
 }
 
