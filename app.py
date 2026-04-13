@@ -4,11 +4,14 @@ from extensions import db, login_manager
 from forms import LoginForm, RegisterForm
 from models import User
 from models import Application, Job, db
+from werkzeug.security import generate_password_hash, check_password_hash
 
 import os
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'beridayan2008'
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', '')
+if not app.config['SECRET_KEY']:
+    raise RuntimeError('SECRET_KEY environment variable must be set')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(app.instance_path, 'database.db')
 
 db.init_app(app)
@@ -29,7 +32,7 @@ def login():
     form = LoginForm()
     if form.validate_on_submit():
         user = User.query.filter_by(email=form.email.data).first()
-        if user and user.password == form.password.data:
+        if user and check_password_hash(user.password, form.password.data):
             login_user(user)
             return redirect(url_for('employer_dashboard' if user.role == 'employer' else 'worker_dashboard'))
         flash('אימייל או סיסמה שגויים')
@@ -46,7 +49,8 @@ def register():
             return render_template('register.html', form=form)
 
         # משתמש לא קיים – צור חדש
-        user = User(email=form.email.data, password=form.password.data, role=form.role.data)
+        hashed_password = generate_password_hash(form.password.data)
+        user = User(email=form.email.data, password=hashed_password, role=form.role.data)
         db.session.add(user)
         try:
             db.session.commit()
@@ -113,10 +117,12 @@ def logout():
 @app.route('/new-job', methods=['GET', 'POST'])
 @login_required
 def new_job():
-    if request.method == 'POST':
-        title = request.form['title']
-        description = request.form['description']
-        hourly_rate = request.form['hourly_rate']
+    from forms import JobForm
+    form = JobForm()
+    if form.validate_on_submit():
+        title = form.title.data
+        description = form.description.data
+        hourly_rate = form.hourly_rate.data
         
         job = Job(
             title=title,
@@ -129,11 +135,17 @@ def new_job():
         flash('משרה פורסמה בהצלחה!')
         return redirect(url_for('employer_dashboard'))  # Adjust to your dashboard route
     
-    return render_template('new_job.html')
+    return render_template('new_job.html', form=form)
 
 @app.route('/delete-job/<int:job_id>', methods=['POST'])
 @login_required
 def delete_job(job_id):
+    from forms import DeleteJobForm
+    form = DeleteJobForm()
+    if not form.validate_on_submit():
+        flash('בקשה לא חוקית', 'danger')
+        return redirect(url_for('employer_dashboard'))
+
     job = Job.query.get_or_404(job_id)
 
     if job.employer_id != current_user.id:
@@ -157,6 +169,7 @@ def delete_job(job_id):
 @app.route('/edit-job/<int:job_id>', methods=['GET', 'POST'])
 @login_required
 def edit_job(job_id):
+    from forms import JobForm
     job = Job.query.get_or_404(job_id)
 
     # בדיקה שהמשתמש הוא הבעלים של המשרה
@@ -164,11 +177,12 @@ def edit_job(job_id):
         flash('אין לך הרשאה לערוך משרה זו', 'danger')
         return redirect(url_for('employer_dashboard'))
 
-    if request.method == 'POST':
+    form = JobForm(obj=job)
+    if form.validate_on_submit():
         # עדכון המשרה עם הנתונים מהטופס
-        job.title = request.form['title']
-        job.description = request.form['description']
-        job.hourly_rate = request.form['hourly_rate']
+        job.title = form.title.data
+        job.description = form.description.data
+        job.hourly_rate = form.hourly_rate.data
 
         try:
             db.session.commit()
@@ -179,11 +193,17 @@ def edit_job(job_id):
             flash('אירעה שגיאה בעדכון המשרה', 'danger')
 
     # GET - הצגת טופס עריכה עם הנתונים הקיימים
-    return render_template('edit_job.html', job=job)
+    return render_template('edit_job.html', job=job, form=form)
 
 @app.route('/apply/<int:job_id>', methods=['POST'])
 @login_required
 def apply_job(job_id):
+    from forms import ApplyForm
+    form = ApplyForm()
+    if not form.validate_on_submit():
+        flash('בקשה לא חוקית', 'danger')
+        return redirect(url_for('worker_dashboard'))
+
     existing = Application.query.filter_by(user_id=current_user.id, job_id=job_id).first()
     if existing:
         flash('כבר הגשת מועמדות לעבודה זו.', 'warning')
@@ -219,4 +239,4 @@ if __name__ == '__main__':
     with app.app_context():
 
         db.create_all()
-    app.run(debug=True)
+    app.run(debug=False)
