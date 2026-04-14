@@ -4,11 +4,14 @@ from extensions import db, login_manager
 from forms import LoginForm, RegisterForm
 from models import User
 from models import Application, Job, db
+from werkzeug.security import generate_password_hash, check_password_hash
 
 import os
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'beridayan2008'
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', '')
+if not app.config['SECRET_KEY']:
+    raise RuntimeError('SECRET_KEY environment variable is not set')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(app.instance_path, 'database.db')
 
 db.init_app(app)
@@ -29,7 +32,7 @@ def login():
     form = LoginForm()
     if form.validate_on_submit():
         user = User.query.filter_by(email=form.email.data).first()
-        if user and user.password == form.password.data:
+        if user and check_password_hash(user.password, form.password.data):
             login_user(user)
             return redirect(url_for('employer_dashboard' if user.role == 'employer' else 'worker_dashboard'))
         flash('אימייל או סיסמה שגויים')
@@ -46,7 +49,8 @@ def register():
             return render_template('register.html', form=form)
 
         # משתמש לא קיים – צור חדש
-        user = User(email=form.email.data, password=form.password.data, role=form.role.data)
+        hashed_password = generate_password_hash(form.password.data)
+        user = User(email=form.email.data, password=hashed_password, role=form.role.data)
         db.session.add(user)
         try:
             db.session.commit()
@@ -113,6 +117,9 @@ def logout():
 @app.route('/new-job', methods=['GET', 'POST'])
 @login_required
 def new_job():
+    if current_user.role != 'employer':
+        flash('אין לך הרשאה לפרסם משרות', 'danger')
+        return redirect(url_for('home'))
     if request.method == 'POST':
         title = request.form['title']
         description = request.form['description']
@@ -134,6 +141,9 @@ def new_job():
 @app.route('/delete-job/<int:job_id>', methods=['POST'])
 @login_required
 def delete_job(job_id):
+    if current_user.role != 'employer':
+        flash('אין לך הרשאה למחוק משרות', 'danger')
+        return redirect(url_for('home'))
     job = Job.query.get_or_404(job_id)
 
     if job.employer_id != current_user.id:
@@ -157,6 +167,9 @@ def delete_job(job_id):
 @app.route('/edit-job/<int:job_id>', methods=['GET', 'POST'])
 @login_required
 def edit_job(job_id):
+    if current_user.role != 'employer':
+        flash('אין לך הרשאה לערוך משרות', 'danger')
+        return redirect(url_for('home'))
     job = Job.query.get_or_404(job_id)
 
     # בדיקה שהמשתמש הוא הבעלים של המשרה
@@ -219,4 +232,4 @@ if __name__ == '__main__':
     with app.app_context():
 
         db.create_all()
-    app.run(debug=True)
+    app.run(debug=False)
